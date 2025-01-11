@@ -8,24 +8,22 @@ enum I2CDevice {
   RTC = 0x68,
   IMU = 0x69,
   GPIOXL = 0x20,
-  GPIOXR = 0x21,
-  DI_KILALA = 0x00 
+  GPIOXR = 0x21
 };
 
 // Estruktura para mag-imbak ng impormasyon ng aparato
 struct I2CDeviceInfo {
   I2CDevice device;
-  byte address;
   const char* name;
 };
 
 // Hanay ng mga aparato na gusto mong beripikahin
-I2CDeviceInfo devices[] = {
-  {GPIOXL, 0x20, "GPIOXL (MCP23017)"},
-  {GPIOXR, 0x21, "GPIOXR (MCP23017)"},
-  {EEPROM, 0x57, "EEPROM (ATMHK218)"},
-  {RTC, 0x68, "RTC (DS3231)"},
-  {IMU, 0x69, "IMU (MPU6050)"}
+const I2CDeviceInfo devices[] = {
+  {GPIOXL, "GPIOXL (MCP23017)"},
+  {GPIOXR, "GPIOXR (MCP23017)"},
+  {EEPROM, "EEPROM (ATMHK218)"},
+  {RTC, "RTC (DS3231)"},
+  {IMU, "IMU (MPU6050)"}
 };
 
 void checkI2CDevices() {
@@ -35,7 +33,7 @@ void checkI2CDevices() {
   Serial.println("\t___________________________ MGA APARATONG I2C ___________________________");
   
   for (size_t i = 0; i < sizeof(devices) / sizeof(devices[0]); i++) {
-    byte address = devices[i].address;
+    byte address = static_cast<byte>(devices[i].device);
     Wire.beginTransmission(address);
     char output[80]; // Buffer para sa formatted string
     
@@ -56,7 +54,6 @@ void checkI2CDevices() {
   Serial.println(errorCount);
   Serial.println("\t_________________________________________________________________________");
 }
-
 
 void setup() {
   Wire.begin();
