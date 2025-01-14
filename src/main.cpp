@@ -3,7 +3,8 @@
 
 #define BAUD_RATE 115200
 
-enum I2CDevice {
+// Enumerasyon para sa mga adres ng aparatong IIC
+enum IICDevice {
   EEPROM = 0x57,
   RTC = 0x68,
   IMU = 0x69,
@@ -12,13 +13,13 @@ enum I2CDevice {
 };
 
 // Estruktura para mag-imbak ng impormasyon ng aparato
-struct I2CDeviceInfo {
-  I2CDevice device;
+struct IICDeviceInfo {
+  IICDevice device;
   const char* name;
 };
 
-// Hanay ng mga aparato na gusto mong beripikahin
-const I2CDeviceInfo devices[] = {
+// Hanay ng mga aparato na gusto nating beripikahin
+const IICDeviceInfo devices[] = {
   {GPIOXL, "GPIOXL (MCP23017)"},
   {GPIOXR, "GPIOXR (MCP23017)"},
   {EEPROM, "EEPROM (ATMHK218)"},
@@ -26,23 +27,27 @@ const I2CDeviceInfo devices[] = {
   {IMU, "IMU (MPU6050)"}
 };
 
-void checkI2CDevices() {
+// Funsiyon para beripikahin ang mga aparatong IIC
+void checkIICDevices() {
   int detectedCount = 0;
   int errorCount = 0;
+
   Serial.println("\t_________________________________________________________________________");
-  Serial.println("\t___________________________ MGA APARATONG I2C ___________________________");
-  
+  Serial.println("\t___________________________ MGA APARATONG IIC ___________________________");
+
+  // Iterasyon sa bawat aparato
   for (size_t i = 0; i < sizeof(devices) / sizeof(devices[0]); i++) {
-    byte address = static_cast<byte>(devices[i].device);
-    Wire.beginTransmission(address);
+    byte iicaddr = static_cast<byte>(devices[i].device);
+    Wire.beginTransmission(iicaddr);
     char output[80]; // Buffer para sa formatted string
-    
+
+    // Itransmit ang address at i-check ang resulta
     if (Wire.endTransmission() == 0) {
       detectedCount++;
-      sprintf(output, "\t\t0x%02X\t[ %-20s ]\t- OK", address, devices[i].name);
+      snprintf(output, sizeof(output), "\t\t0x%02X\t| %-20s | OK", iicaddr, devices[i].name);
     } else {
       errorCount++;
-      sprintf(output, "\t\t0x%02X\t[ %-20s ]\t- ERROR (Hindi Nadetek)", address, devices[i].name);
+      snprintf(output, sizeof(output), "\t\t0x%02X\t| %-20s | ERROR (Hindi Nadetek)", iicaddr, devices[i].name);
     }
     Serial.println(output);
   }
@@ -56,15 +61,15 @@ void checkI2CDevices() {
 }
 
 void setup() {
-  Wire.begin();
-  Serial.begin(BAUD_RATE);
+  Wire.begin(); // Inisyalisahin ang bulos IIC
+  Serial.begin(BAUD_RATE); // Simulan ang komunikasyong sunuran
   Serial.println("\n\tINISYALISASYON...\n");
 
-  checkI2CDevices();
+  checkIICDevices(); // Tawagin ang function para beripikahin ang mga aparato
 
   Serial.println("\n\tNATAPOS ANG INISYALISASYON!");
 }
 
 void loop() {
-  
+  // Pwedeng magdagdag ng iba pang lohiko dito kung kinakailangan
 }
