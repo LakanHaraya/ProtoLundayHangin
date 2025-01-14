@@ -1,7 +1,11 @@
 #include <Arduino.h>
 #include <Wire.h>
+#include <SPI.h>
+#include <SD.h>
 
 #define BAUD_RATE 115200
+
+const int spicsp = 10;  // serial peripheral interface chip select pin
 
 // Enumerasyon para sa mga adres ng aparatong IIC
 enum IICDevice {
@@ -44,7 +48,7 @@ void checkIICDevices() {
     // Itransmit ang address at i-check ang resulta
     if (Wire.endTransmission() == 0) {
       detectedCount++;
-      snprintf(output, sizeof(output), "\t\t0x%02X\t| %-20s | OK", iicaddr, devices[i].name);
+      snprintf(output, sizeof(output), "\t\t0x%02X\t| %-20s | \t OK", iicaddr, devices[i].name);
     } else {
       errorCount++;
       snprintf(output, sizeof(output), "\t\t0x%02X\t| %-20s | ERROR (Hindi Nadetek)", iicaddr, devices[i].name);
@@ -67,7 +71,25 @@ void setup() {
 
   checkIICDevices(); // Tawagin ang function para beripikahin ang mga aparato
 
-  Serial.println("\n\tNATAPOS ANG INISYALISASYON!");
+//!! *******************************************************
+//!! *******************************************************
+//!! *******************************************************
+//!! *******************************************************
+  // Pagsimula ng komunikasyon gamit ang SD card
+  Serial.println("Pagsusuri ng SD card...");
+
+  // I-check kung ang SD card module ay nakakabit at handa na
+  if (!SD.begin(spicsp)) {
+    Serial.println("ERROR: Walang nakakabit na SD card o may problema sa module.");
+  } else {
+    Serial.println("Matagumpay ang koneksyon sa SD card!");
+  }
+//!! *******************************************************
+//!! *******************************************************
+//!! *******************************************************
+//!! *******************************************************
+
+  Serial.println("\n\tNATAPOS ANG INISYALISASYON!\n");
 }
 
 void loop() {
