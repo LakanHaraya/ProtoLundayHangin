@@ -7,91 +7,91 @@
 
 const int spicsp = 10;  // serial peripheral interface chip select pin
 
-// Enumerasyon para sa mga adres ng aparatong IIC
-enum IICDevice {
-  EEPROM = 0x57,
-  RTC = 0x68,
-  IMU = 0x69,
-  GPIOXL = 0x20,
-  GPIOXR = 0x21
-};
-
 // Estruktura para mag-imbak ng impormasyon ng aparato
-struct IICDeviceInfo {
-  IICDevice device;
-  const char* name;
+struct PeripheralInfo {
+  const char* name;     // Pangalan ng aparato
+  const char* protocol; // Ginagamit na protokol
+  const char* address;  // IIC address o kaya SPI chip select
+  const char* chip;     // Uri ng tsip
 };
 
-// Hanay ng mga aparato na gusto nating beripikahin
-const IICDeviceInfo devices[] = {
-  {GPIOXL, "GPIOXL (MCP23017)"},
-  {GPIOXR, "GPIOXR (MCP23017)"},
-  {EEPROM, "EEPROM (ATMHK218)"},
-  {RTC, "RTC (DS3231)"},
-  {IMU, "IMU (MPU6050)"}
+// Hanay ng mga aparato na gusto nating isakodigo (hardcode)
+const PeripheralInfo peripherals[] = {
+  {"GPIOXL", "I2C", "0x20", "MCP23017"},
+  {"GPIOXR", "I2C", "0x21", "MCP23017"},
+  {"EEPROM", "I2C", "0x57", "ATMHK218"},
+  {"RTC", "I2C", "0x68", "DS3231"},
+  {"IMU", "I2C", "0x69", "MPU6050"},
+  {"MSC", "SPI", "0x21-GPA7", "AIPA347"}
 };
 
-// Funsiyon para beripikahin ang mga aparatong IIC
-void checkIICDevices() {
-  int detectedCount = 0;
-  int errorCount = 0;
+const size_t peripheralCount = sizeof(peripherals) / sizeof(peripherals[0]);
 
-  Serial.println("\t_________________________________________________________________________");
-  Serial.println("\t___________________________ MGA APARATONG IIC ___________________________");
+// Hanay ng estado para sa bawat peripheral (pwedeng baguhin)
+const char* peripheralStatus[] = {
+  "Wala", "Wala", "Wala", "Wala", "Wala", "Wala"
+};
 
-  // Iterasyon sa bawat aparato
-  for (size_t i = 0; i < sizeof(devices) / sizeof(devices[0]); i++) {
-    byte iicaddr = static_cast<byte>(devices[i].device);
-    Wire.beginTransmission(iicaddr);
-    char output[80]; // Buffer para sa formatted string
+void printPeripheralStat() {
+  // Pamuhatan ng talahanayan
+  Serial.println("\t+---------------------------------------------------+");
+  Serial.println("\t|                   MGA PERIPERAL                   |");
+  Serial.println("\t+--------+----------+-----------+----------+--------+");
+  Serial.println("\t| Ngalan | Protokol |   Adres   |   Tsip   | Estado |");
+  Serial.println("\t+--------+----------+-----------+----------+--------+");
 
-    // Itransmit ang address at i-check ang resulta
-    if (Wire.endTransmission() == 0) {
-      detectedCount++;
-      snprintf(output, sizeof(output), "\t\t0x%02X\t| %-20s | \t OK", iicaddr, devices[i].name);
-    } else {
-      errorCount++;
-      snprintf(output, sizeof(output), "\t\t0x%02X\t| %-20s | ERROR (Hindi Nadetek)", iicaddr, devices[i].name);
-    }
-    Serial.println(output);
+  // Ipakita ang mga periperal sa format ng talahanayan
+  for (size_t i = 0; i < peripheralCount; i++) {
+    char line[100];
+    snprintf(
+      line, sizeof(line),
+      "\t| %-6s | %-8s | %-9s | %-8s | %-6s |",
+      peripherals[i].name,
+      peripherals[i].protocol,
+      peripherals[i].address,
+      peripherals[i].chip,
+      peripheralStatus[i]  // I-print ang estado mula sa auxiliary array
+    );
+    Serial.println(line);
   }
+  Serial.println("\t+--------+----------+-----------+----------+--------+");
+}
 
-  // Magpakita ng buod
-  Serial.print("\n\t\tBUOD: \t\t Nadetek: ");
-  Serial.print(detectedCount);
-  Serial.print("\t\tHindi Nadetek: ");
-  Serial.println(errorCount);
-  Serial.println("\t_________________________________________________________________________");
+bool scanIICPeripheral(uint8_t address) {
+  Wire.beginTransmission(address);
+  return Wire.endTransmission() == 0;  // Ang 0 ay nangangahulugang matagumpay
+}
+
+void checkIICPeripheral() {
+  for (size_t i = 0; i < peripheralCount; i++) {
+    if (strcmp(peripherals[i].protocol, "I2C") == 0) {
+      uint8_t address = strtol(peripherals[i].address, NULL, 16);
+      bool isConnected = scanIICPeripheral(address);
+
+      // I-update ang estado sa auxiliary array
+      if (isConnected) {
+        peripheralStatus[i] = "OK";  // Baguhin ang estado sa auxiliary array
+      } else {
+        peripheralStatus[i] = "ERROR"; 
+      }
+    }
+  }
 }
 
 void setup() {
-  Wire.begin(); // Inisyalisahin ang bulos IIC
-  Serial.begin(BAUD_RATE); // Simulan ang komunikasyong sunuran
-  Serial.println("\n\tINISYALISASYON...\n");
+  Wire.begin();
+  Serial.begin(BAUD_RATE);
+  Serial.println("INISYALISASYON...\n");
 
-  checkIICDevices(); // Tawagin ang function para beripikahin ang mga aparato
+  checkIICPeripheral();
 
-//!! *******************************************************
-//!! *******************************************************
-//!! *******************************************************
-//!! *******************************************************
-  // Pagsimula ng komunikasyon gamit ang SD card
-  Serial.println("Pagsusuri ng SD card...");
+  
 
-  // I-check kung ang SD card module ay nakakabit at handa na
-  if (!SD.begin(spicsp)) {
-    Serial.println("ERROR: Walang nakakabit na SD card o may problema sa module.");
-  } else {
-    Serial.println("Matagumpay ang koneksyon sa SD card!");
-  }
-//!! *******************************************************
-//!! *******************************************************
-//!! *******************************************************
-//!! *******************************************************
+  printPeripheralStat();
 
-  Serial.println("\n\tNATAPOS ANG INISYALISASYON!\n");
+  Serial.println("\nNatapos ang Inisyalisasyon.");
 }
 
 void loop() {
-  // Pwedeng magdagdag ng iba pang lohiko dito kung kinakailangan
+  // Walang ginagawa sa loop() sa ngayon
 }
