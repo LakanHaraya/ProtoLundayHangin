@@ -4,16 +4,20 @@ Ito ang panukalang kalipunan ng mga kodigo para sa Kontroler Pad ng LundayHangin
 
 ### Mga Funsiyong Naipatupad
 `checkIICPeripheral()` 
+`debugPrint()`
 `printPeripheralStat()`
 `scanIICPeripheral()`
-`debugPrint()`
 ___________
+_______
 
-* `checkIICPeripheral()`
+
+#### `void checkIICPeripheral()`
 
 Tiyakin na ang lahat ng mga IIC periperal na nakakonekta patungo sa MCU. Ang lahat ng IIC periperal ay gumagamit ng IIC protokol at nakakonekta sa mga bulos ng SDA at SCL.
+___
 
-* `debugPrint()`
+
+#### `void debugPrint(String debugTitle, String debugMessage)`
 
 Ipakita sa Serial Monitor ang mga debug messages habang pinauunlad ang mulaang kodigo. Palitan ang X ng 1 o kaya 0. Ang 1 ay para mapagana ang debug messages at 0 ang hindi. 
 
@@ -26,8 +30,10 @@ DEBUGGING:
     'checkIICPeripheral()'
     Sisimulang magtsek ng mga IIC periperal.
 ```
+___
 
-* `printPeripheralStat()`
+
+#### `void printPeripheralStat()`
 
 Ipakita sa Serial Monitor ang katayuan ng lahat ng periperal, IIC o SPI man. Narito sa ibaba ang halimbawa.
 
@@ -45,8 +51,9 @@ Ipakita sa Serial Monitor ang katayuan ng lahat ng periperal, IIC o SPI man. Nar
         | MSC    | SPI      | 0x21-GPA7 | AIPA347  | Wala   |
         +--------+----------+-----------+----------+--------+
 ```
+___
 
-* `scanIICPeripheral()`
+#### `bool scanIICPeripheral(uint8_t address)`
 
 Suriin ang mga IIC address ng mga IIC periperal na nakalista sa listahan.
 
