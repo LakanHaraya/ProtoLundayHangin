@@ -1,9 +1,19 @@
+// Kumusta Pabs!
+// Wala pang 'checkSPIPeripheral()', baka gusto mong simulan na!
+//
+// 'checkIICPeripheral()'
+// 'printPeripheralStat()'
+// 'debugPrint()'
+// 
+// 
+
 #include <Arduino.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
 
 #define BAUD_RATE 115200
+#define DEBUG 0  // Palitan ng 0 kung gusto mong hindi paganahin ang debug messages
 
 const int spicsp = 10;  // serial peripheral interface chip select pin
 
@@ -32,6 +42,15 @@ const char* peripheralStatus[] = {
   "Wala", "Wala", "Wala", "Wala", "Wala", "Wala"
 };
 
+void debugPrint(String debugTitle, String debugMessage) {
+  if (DEBUG) { // Itsek kung pinagana ang debugging
+    Serial.print("DEBUGGING: \n");
+    Serial.print("\t\'" + debugTitle + "\'\n");
+    Serial.print("\t" + debugMessage + "\n");
+    Serial.println();
+  }
+}
+
 void printPeripheralStat() {
   // Pamuhatan ng talahanayan
   Serial.println("\t+---------------------------------------------------+");
@@ -54,7 +73,7 @@ void printPeripheralStat() {
     );
     Serial.println(line);
   }
-  Serial.println("\t+--------+----------+-----------+----------+--------+");
+  Serial.println("\t+--------+----------+-----------+----------+--------+\n");
 }
 
 bool scanIICPeripheral(uint8_t address) {
@@ -80,18 +99,24 @@ void checkIICPeripheral() {
 
 void setup() {
   Wire.begin();
+  SPI.begin();
   Serial.begin(BAUD_RATE);
   Serial.println("INISYALISASYON...\n");
 
+  debugPrint("checkIICPeripheral()", "Sisimulang magtsek ng mga IIC periperal.");
   checkIICPeripheral();
+  debugPrint("checkIICPeripheral()", "Natapos ang pagtsek ng mga IIC periperal.");
 
+  // Magdagdag ng 'checkSPIPeripheral()' dito! 
   
-
+  debugPrint("printPeripheralStat()", "Sisimulang ipakita ang katayuan ng mga periperal.");
   printPeripheralStat();
+  debugPrint("printPeripheralStat()", "Natapos ipakita ang katayuan ng mga periperal.");
 
-  Serial.println("\nNatapos ang Inisyalisasyon.");
+  Serial.println("\nNatapos ang Inisyalisasyon.\n");
 }
 
 void loop() {
-  // Walang ginagawa sa loop() sa ngayon
+  debugPrint("ISINASAAYOS ANG MAYSILO...", "Huwag lumampas sa dilaw na linya.");
+  delay(60000);
 }
