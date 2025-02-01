@@ -42,6 +42,12 @@ const char* peripheralStatus[] = {
   "Wala", "Wala", "Wala", "Wala", "Wala", "Wala"
 };
 
+/**
+ * @brief  Ipinapakita ang debug message sa Serial Monitor.
+ * 
+ * @param debugTitle   Ang pamagat o kategorya ng debug message.
+ * @param debugMessage Ang mismong mensahe na ipapakita.
+ */
 void debugPrint(String debugTitle, String debugMessage) {
   if (DEBUG) { // Itsek kung pinagana ang debugging
     Serial.print("DEBUGGING: \n");
@@ -51,6 +57,15 @@ void debugPrint(String debugTitle, String debugMessage) {
   }
 }
 
+/**
+ * @brief  Ipinapakita ang estado ng lahat ng nakakonektang periperal sa isang talahanayan.
+ * 
+ * @details Ipinapadala sa Serial Monitor ang isang naka-format na talahanayan
+ * na naglalaman ng impormasyon tungkol sa bawat periperal, kasama ang kanilang
+ * pangalan, protokol, adres, mikrotsip, at kasalukuyang estado.
+ * 
+ * @note   Tiyaking napunan nang tama ang `peripherals` at `peripheralStatus` bago ito tawagin.
+ */
 void printPeripheralStat() {
   // Pamuhatan ng talahanayan
   Serial.println("\t+---------------------------------------------------+");
@@ -76,11 +91,30 @@ void printPeripheralStat() {
   Serial.println("\t+--------+----------+-----------+----------+--------+\n");
 }
 
+/**
+ * @brief  Sinusuri kung may tugon mula sa isang I2C periperal sa ibinigay na address.
+ * 
+ * @param  address  Ang I2C address ng periperal na susuriin.
+ * 
+ * @return `true` kung may tumugon na periperal, `false` kung wala.
+ * 
+ * @note   Gumagamit ito ng `Wire` library para sa komunikasyon sa I2C bus.
+ */
 bool scanIICPeripheral(uint8_t address) {
   Wire.beginTransmission(address);
   return Wire.endTransmission() == 0;  // Ang 0 ay nangangahulugang matagumpay
 }
 
+/**
+ * @brief  Sinusuri ang koneksiyon ng lahat ng I2C periperal at isinasapanahon ang kanilang estado.
+ * 
+ * @details Ang funsiyon na ito ay dumadaan sa listahan ng mga periperal at tinitingnan kung 
+ *          ang protokol nila ay "I2C". Kung gayon, susuriin ang kanilang address upang 
+ *          matukoy kung nakakonekta sila. Ang resulta ay inilalagay sa `peripheralStatus[]` 
+ *          bilang "OK" kung nakakonekta, at "ERROR" kung hindi.
+ * 
+ * @note   Gumagamit ito ng `scanIICPeripheral()` upang suriin ang bawat I2C device.
+ */
 void checkIICPeripheral() {
   for (size_t i = 0; i < peripheralCount; i++) {
     if (strcmp(peripherals[i].protocol, "I2C") == 0) {
