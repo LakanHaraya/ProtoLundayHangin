@@ -4,7 +4,7 @@
 // 'checkIICPeripheral()'
 // 'printPeripheralStat()'
 // 'debugPrint()'
-// 
+// 'scanIICPeripheral()'
 // 
 
 #include <Arduino.h>
@@ -13,7 +13,7 @@
 #include <SD.h>
 
 #define BAUD_RATE 115200
-#define DEBUG 0  // Palitan ng 0 kung gusto mong hindi paganahin ang debug messages
+#define DEBUG 1  // Palitan ng 0 kung gusto mong hindi paganahin ang debug messages
 
 const int spicsp = 10;  // serial peripheral interface chip select pin
 
