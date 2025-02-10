@@ -25,45 +25,57 @@ RTC_DS3231 rtc;
 #define CTRL "KTRL"   // KONTROL
 #define WARN "BBLA"   // BABALA
 
-struct PeriDevice {
+// Estrukturang datos para sa mga periperal I2C
+struct I2CPeripheral {
     const char* name;
-    const char* type;    // Bagong field para sa protocol (hal. "I2C")
     const char* model;
     uint8_t address;
-    bool isWorking;
+    bool status;
 };
 
-// Listahan ng mga I2C devices
-PeriDevice periDevices[] = {
-  // Mga Aparatong Periperal I2C 
-  {"GPIOXL", "I2C", "MCP23017 I/O Expander Chip", 0x20, false},
-  {"GPIOXR", "I2C", "MCP23017 I/O Expander Chip", 0x21, false},
-  {"EEPROM", "I2C", "ATMHK218 EEPROM-RTC Module", 0x57, false},
-  {"RTC", "I2C", "DS3231 Real-Time Clock Module", 0x68, false},
-  {"IMU", "I2C", "MPU6050 Inertial Measurement Unit Module", 0x69, false},
-
-  // Mga Aparatong Periperal SPI
-  {"MSC", "SPI", "Micro SD Card Module", 10, false},
+// Estrukturang datos para sa mga periperal SPI
+struct SPIPeripheral {
+  const char* name;
+  const char* model;
+  uint8_t csPin;
+  bool status;
 };
-const int numDevices = sizeof(periDevices) / sizeof(periDevices[0]);
 
-void printTimestamp() {
-  DateTime now = rtc.now();  // Get current time from the RTC
-  
-  // Format the timestamp as [YY-MM-DD HH:MM:SS]
-  char timestamp[20];
-  snprintf(timestamp, sizeof(timestamp), "%02d-%02d-%02d %02d:%02d:%02d",
-           now.year() - 2000, now.month(), now.day(),
-           now.hour(), now.minute(), now.second());
-  
-  // Print the timestamp
-  Serial.print("[");
-  Serial.print(timestamp);
-  Serial.print("] ");
-}
+// Listahan ng mga aparatong I2C 
+I2CPeripheral i2cDevices[] = {
+  {"GPIOXL", "MCP23017 I/O Expander Chip", 0x20, false},
+  {"GPIOXR", "MCP23017 I/O Expander Chip", 0x21, false},
+  {"EEPROM", "ATMHK218 EEPROM-RTC Module", 0x57, false},
+  {"RTC", "DS3231 Real-Time Clock Module", 0x68, false},
+  {"IMU", "MPU6050 Inertial Measurement Unit Module", 0x69, false}
+};
 
+// Listahan ng mga aparatong SPI
+SPIPeripheral spiDevices[] = {
+  {"MSC", "Micro SD Card Module", 10, false}
+};
+
+// Bilang ng mga aparato
+const int numI2C = sizeof(i2cDevices) / sizeof(i2cDevices[0]);
+const int numSPI = sizeof(spiDevices) / sizeof(spiDevices[0]);
+
+// Funsiyon para sa pagtatatak ng oras
+// void printTimestamp() {
+//   DateTime now = rtc.now();  // Kumuha ng kasalukuyang oras mula sa RTC
+  
+//   // Iformat ang tatakang-oras bilang [YY-MM-DD HH:MM:SS]
+//   char timestamp[20];
+//   snprintf(timestamp, sizeof(timestamp), "%02d-%02d-%02d %02d:%02d:%02d", now.year() - 2000, now.month(), now.day(), now.hour(), now.minute(), now.second());
+  
+//   // Ilimbag ang tatakang-oras
+//   Serial.print("[");
+//   Serial.print(timestamp);
+//   Serial.print("] ");
+// }
+
+// Funsiyon para sa paglimbag ng talabakasang mensahe
 void printLogMess(const char* type, const char* logMessage) {
-  // Listahan ng mga pinapayagang log types
+  // Listahan ng mga pinapayagang uri ng talabakasan
   const char* validTypes[] = {
     COMMS,  CTRL,   ERROR,  INIT,
     INFO,   LOG,    POWER,  RESET,
@@ -71,7 +83,7 @@ void printLogMess(const char* type, const char* logMessage) {
   };
   bool isValidType = false;
 
-  // Suriin kung ang 'type' ay isa sa mga valid types
+  // Suriin kung ang 'type' ay isa sa mga tinatanggap na uri
   for (size_t i = 0; i < sizeof(validTypes) / sizeof(validTypes[0]); i++) {
     if (strcmp(type, validTypes[i]) == 0) {
       isValidType = true;
@@ -79,9 +91,9 @@ void printLogMess(const char* type, const char* logMessage) {
     }
   }
 
-  // Mag-print lamang kung valid ang type at naka-enable ang PRINTLOGS
+  // Maglimbag lamang kung tanggap ang uri at pinapagana ang PRINTLOGS
   if (isValidType && PRINTLOGS) {
-    printTimestamp();
+    // printTimestamp();
     Serial.print("[");
     Serial.print(type);
     Serial.print("] ");
@@ -89,9 +101,10 @@ void printLogMess(const char* type, const char* logMessage) {
   }
 }
 
+// Funsiyon para sa paglimbag ng dalisapang mensahe
 void printDebugMess(const char* logMessage) {
   if (PRINTLOGS && PRINTDEBUGS) {
-    printTimestamp();
+    // printTimestamp();
     Serial.print("[");
     Serial.print(DEBUG);
     Serial.print("] ");
@@ -99,90 +112,95 @@ void printDebugMess(const char* logMessage) {
   }
 }
 
-void checkPeriDevices() {
-  for (int i = 0; i < numDevices; i++) {
-    if (strcmp(periDevices[i].type, "I2C") == 0) {
-      Wire.beginTransmission(periDevices[i].address);
-      periDevices[i].isWorking = (Wire.endTransmission() == 0);
-    } 
-    else if (strcmp(periDevices[i].type, "SPI") == 0) {
-      pinMode(periDevices[i].address, OUTPUT);
-      digitalWrite(periDevices[i].address, LOW);
-
-      SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
-      uint8_t response = SPI.transfer(0xFF);  // Magpadala ng dummy byte
-      SPI.endTransaction();
-            
-      digitalWrite(periDevices[i].address, HIGH);
-            
-      // Ang isang working SPI device ay karaniwang may *non-zero* response
-      periDevices[i].isWorking = (response != 0xFF);
+// Funsiyon para sa pagtsetsek ng aparatong I2C 
+void checkI2CDevices() {
+  for (int i = 0; i < numI2C; i++) {
+    Wire.beginTransmission(i2cDevices[i].address);
+    if (Wire.endTransmission() == 0) {
+      i2cDevices[i].status = true;  // Natagpuan ang aparato
     }
-  }
-}
-
-void printDeviceStatus() {
-  bool allDevicesFound = true;
-
-  // Loop sa lahat ng periDevices para i-check ang status
-  for (int i = 0; i < numDevices; i++) {
-    char buffer[100];  // Buffer para sa formatted message
-        
-    if (periDevices[i].isWorking) {
-      // Kung ang device ay nadetect (working), iprint ng [IMPO] (INFO)
-      snprintf(buffer, sizeof(buffer), "Gumagana ang %s, %s 0x%02X", periDevices[i].name, periDevices[i].type, periDevices[i].address);
-      printDebugMess(buffer);  // Ipinapadala sa log
-    } 
     else {
-    // Kung ang device ay hindi nadetect (not working), iprint ng [WARN] (BABALA)
-      snprintf(buffer, sizeof(buffer), "Di-gumagana ang %s, %s 0x%02X", periDevices[i].name, periDevices[i].type, periDevices[i].address);
-      printLogMess(WARN, buffer);  // Ipinapadala sa log
-      allDevicesFound = false;    // Itakda ang `allDevicesFound` sa false kung may hindi nadetect
+      i2cDevices[i].status = false; // Di-konektadong aparato
     }
-  }
-
-  // Kung lahat ng devices ay nadetect, iprint ang tagumpay
-  if (allDevicesFound) {
-    printLogMess(INFO, "Matagumpay na natagpuan ang lahat ng aparato.");
-  }
-  else {
-    printLogMess(WARN, "Pakitingnan ang mga koneksiyon.");
   }
 }
 
+// Funsiyon para sa pagtsetsek ng mga aparatong SPI
+void checkSPIDevices() {
+  for (int i = 0; i < numSPI; i++) {
+    digitalWrite(spiDevices[i].csPin, LOW);  // Simulan ang komunikasyon
+    delay(10);  // Bigyan ng kaunting oras para magsimula ang device
+    byte response = 0;
+    
+    // Magpadala ng isang byte (example: 0x01) at hintayin ang sagot
+    SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));  // Set SPI settings
+    response = SPI.transfer(0x01);  // Magpadala ng data at tumanggap ng sagot
+    SPI.endTransaction();
 
+    // Kung walang natanggap na tamang response, hindi connected
+    if (response == 0xFF) {
+      spiDevices[i].status = false;
+      printLogMess(ERROR, ("SPI device " + String(spiDevices[i].name) + " hindi nakakonect.").c_str());
+    }
+    else {
+      spiDevices[i].status = true;
+      printLogMess(INFO, ("SPI device " + String(spiDevices[i].name) + " ay nakakonect.").c_str());
+    }
+
+    digitalWrite(spiDevices[i].csPin, HIGH);  // Tapusin ang komunikasyon
+  }
+}
+
+// Funsiyon ng pagtatakda
 void setup() {
   Serial.begin(BAUD_RATE);
   Serial.println();
-
-  // Initialize the RTC module
-  if (!rtc.begin()) {
-    printLogMess(ERROR, "Hindi matagpuan ang RTC.");
-    while (1);
-  }
-
-  // If the RTC lost power, set the time to the compilation time
-  if (rtc.lostPower()) {
-    printLogMess(WARN, "Ang RTC ay nawalan ng koryente, itinatakda ang oras...");
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));  // Set time to the compilation time
-  }
-
   printLogMess(INIT, "Ang sistema ay sinisimulan.");
 
-  Wire.begin();
-  SPI.begin();
+  // // Inisyalisahin ang modyul RTC
+  // if (!rtc.begin()) {
+  //   printLogMess(ERROR, "Hindi matagpuan ang RTC.");
+  //   while (1);
+  // }
+  // // Kung nawalan ng koryente ang RTC, itakda ang oras sa oras ng kompilasyon
+  // if (rtc.lostPower()) {
+  //   printLogMess(WARN, "Ang RTC ay nawalan ng koryente, itinatakda ang oras...");
+  //   rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));  // Itakda ang oras sa oras ng kompilasyon
+  // }
+
+  Wire.begin(); // Simulan ang bulos I2C
+  SPI.begin();  // Simulan ang bulos SPI
 
   delay(1000);  // Hintay sandali bago magsimula ang pag-check
 
-  checkPeriDevices();
-  printDeviceStatus();
+  for (int i = 0; i < numSPI; i++) {
+    pinMode(spiDevices[i].csPin, OUTPUT);
+  }
 
   printLogMess(INIT, "Natapos ang pagsisimula ng sistema.");
 }
 
+// Funsiyon ng pinauulit
 void loop() {
   printLogMess(INFO, "Tuloy ang silo.");
-  checkPeriDevices();
-  printDeviceStatus();
+  checkI2CDevices();
+  checkSPIDevices();
+  Serial.println("== I2C Device Status ==");
+  for (int i = 0; i < numI2C; i++) {
+      Serial.print(i2cDevices[i].name);
+      Serial.print(" (0x");
+      Serial.print(i2cDevices[i].address, HEX);
+      Serial.print("): ");
+      Serial.println(i2cDevices[i].status ? "SUMASALINYA" : "DI-SUMASALINYA");
+  }
+
+  Serial.println("== SPI Device Status ==");
+  for (int i = 0; i < numSPI; i++) {
+      Serial.print(spiDevices[i].name);
+      Serial.print(" (CS Pin ");
+      Serial.print(spiDevices[i].csPin);
+      Serial.print("): ");
+      Serial.println(spiDevices[i].status ? "SUMASALINYA" : "DI-SUMASALINYA");
+  }
   delay(10000);
 }
