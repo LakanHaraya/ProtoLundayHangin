@@ -127,6 +127,21 @@ void checkSPIDevices(bool initialCheck) {
   }
 }
 
+// !!!!!!!!!!!!!!!!!!!!! AYUSIN ANG BUONG BLOKE !!!!!!!!!!!!!!!!!!!
+// !!!!!!!!!!!!!!!!!!!!! AYUSIN ANG BUONG BLOKE !!!!!!!!!!!!!!!!!!!
+// !!!!!!!!!!!!!!!!!!!!! AYUSIN ANG BUONG BLOKE !!!!!!!!!!!!!!!!!!!
+bool checkSDCard(bool initialCheck) {
+  bool newStatus = SD.begin(spiDevices[0].csPin);  // !! Gawing kusang nadedetek ang MSC !!
+  if (initialCheck || newStatus != spiDevices[0].status) {
+    spiDevices[0].status = newStatus;
+    printLogMess(INFO, newStatus ? "Nakasalpak ang SD kard sa MSC." : "Walang SD kard na nakasalpak sa MSC.");
+  }
+  return newStatus;
+}
+// !!!!!!!!!!!!!!!!!!!!! AYUSIN ANG BUONG BLOKE !!!!!!!!!!!!!!!!!!!
+// !!!!!!!!!!!!!!!!!!!!! AYUSIN ANG BUONG BLOKE !!!!!!!!!!!!!!!!!!!
+// !!!!!!!!!!!!!!!!!!!!! AYUSIN ANG BUONG BLOKE !!!!!!!!!!!!!!!!!!!
+
 void setup() {
   Serial.begin(BAUD_RATE);
   Wire.begin();
@@ -143,6 +158,7 @@ void setup() {
   printLogMess(INIT, "Inisyalisasyon ng Sistema.");
   checkI2CDevices(true);
   checkSPIDevices(true);
+  checkSDCard(true);
   printLogMess(INIT, "Natapos ang Inisyalisasyon.");
 }
 
@@ -152,10 +168,11 @@ void loop() {
   if (currentMillis - prevMillisTask01 >= intervalTask01) {
     prevMillisTask01 = currentMillis;
     checkI2CDevices(false);
+    checkSPIDevices(false);
   }
     
   if (currentMillis - prevMillisTask02 >= intervalTask02) {
     prevMillisTask02 = currentMillis;
-    checkSPIDevices(false);
+    checkSDCard(false);
   }
 }
