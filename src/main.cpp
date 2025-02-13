@@ -22,6 +22,7 @@ RTC_DS3231 rtc;
 #define ERROR "MALI"  // KAMALIAN
 #define CTRL "KTRL"   // KONTROL
 #define WARN "BBLA"   // BABALA
+
 struct I2CPeripheral {
     const char* name;
     uint8_t address;
@@ -35,9 +36,9 @@ struct SPIPeripheral {
 };
 
 I2CPeripheral i2cDevices[] = {
-    {"GPIOXL", 0x20, false},
-    {"GPIOXR", 0x21, false},
-    {"EEPROM", 0x57, false},
+    {"IOXL", 0x20, false},
+    {"IOXR", 0x21, false},
+    {"ERC", 0x57, false},
     {"RTC", 0x68, false},
     {"IMU", 0x69, false}
 };
@@ -54,6 +55,13 @@ unsigned long prevMillisTask02 = 0;
 const long intervalTask01 = 5000;
 const long intervalTask02 = 5000;
 
+void printTimestamp() {
+  DateTime now = rtc.now();
+  char timestamp[21];
+  snprintf(timestamp, sizeof(timestamp), "[%02d-%02d-%02d %02d:%02d:%02d] ", now.year() % 100, now.month(), now.day(), now.hour(), now.minute(), now.second());
+  Serial.print(timestamp);
+}
+
 void printLogMess(const char* type, const char* logMessage) {
   const char* validTypes[] = {
     COMMS, CTRL, ERROR, INIT, INFO, LOG, POWER, RESET, SHUTD, SNSOR, WARN
@@ -63,17 +71,16 @@ void printLogMess(const char* type, const char* logMessage) {
     if (strcmp(type, validTypes[i]) == 0) { isValidType = true; break; }
   }
   if (isValidType && PRINTLOGS) {
-    // printTimestamp();
-    Serial.print("[");
-    Serial.print(type);
-    Serial.print("] ");
-    Serial.println(logMessage);
+    char logBuffer[100];
+    printTimestamp();
+    snprintf(logBuffer, sizeof(logBuffer), "[%s] %s", type, logMessage);
+    Serial.println(logBuffer);
   }
 }
 
 void printDebugMess(const char* logMessage) {
   if (PRINTLOGS && PRINTDEBUGS) {
-    // printTimestamp();
+    printTimestamp();
     Serial.print("[");
     Serial.print(DEBUG);
     Serial.print("] ");
@@ -125,6 +132,14 @@ void setup() {
   Wire.begin();
   SPI.begin();
   Serial.println();
+  if (!rtc.begin()) {
+    printLogMess(ERROR, "Hindi matagpuan ang RTC.");
+    while (1);
+  }
+  if (rtc.lostPower()) {
+    printLogMess(WARN, "Nawalan ng koryente ang RTC, muling tinatakda ang oras.");
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  }
   printLogMess(INIT, "Inisyalisasyon ng Sistema.");
   checkI2CDevices(true);
   checkSPIDevices(true);
