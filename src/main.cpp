@@ -5,10 +5,13 @@
 #include <RTClib.h>
 
 RTC_DS3231 rtc;
+Sd2Card card;
+SdVolume volume;
+File root;
 
 #define BAUD_RATE 115200
 #define PRINTLOGS 1  // Palitan ng 0 kung gusto mong hindi paganahin ang log messages
-#define PRINTDEBUGS 0
+#define PRINTDEBUGS 1
 
 #define DEBUG "DALI"  // DALISAP
 #define INFO "IMPO"   // IMPORMASYON
@@ -127,20 +130,41 @@ void checkSPIDevices(bool initialCheck) {
   }
 }
 
-// !!!!!!!!!!!!!!!!!!!!! AYUSIN ANG BUONG BLOKE !!!!!!!!!!!!!!!!!!!
-// !!!!!!!!!!!!!!!!!!!!! AYUSIN ANG BUONG BLOKE !!!!!!!!!!!!!!!!!!!
-// !!!!!!!!!!!!!!!!!!!!! AYUSIN ANG BUONG BLOKE !!!!!!!!!!!!!!!!!!!
-bool checkSDCard(bool initialCheck) {
-  bool newStatus = SD.begin(spiDevices[0].csPin);  // !! Gawing kusang nadedetek ang MSC !!
-  if (initialCheck || newStatus != spiDevices[0].status) {
-    spiDevices[0].status = newStatus;
-    printLogMess(INFO, newStatus ? "Nakasalpak ang SD kard sa MSC." : "Walang SD kard na nakasalpak sa MSC.");
+bool sdCardInfoPrinted = false;
+void checkSDCardDetails() {
+  if (sdCardInfoPrinted) return;
+  if (!card.init(SPI_HALF_SPEED, spiDevices[0].csPin)) {
+    printLogMess(ERROR, "Hindi ma-initialize ang SD Card.");
+    return;
   }
-  return newStatus;
+  if (!volume.init(card)) {
+    printLogMess(ERROR, "Hindi mabasa ang filesystem ng SD Card.");
+    return;
+  }
+  uint32_t blockSize = 512; // Karaniwang block size
+  uint32_t clusterSize = volume.blocksPerCluster() * blockSize;
+  uint32_t totalBlocks = volume.blocksPerCluster() * volume.clusterCount();
+  uint32_t totalSizeMB = (uint64_t)totalBlocks * blockSize / 1024 / 1024;
+
+  printLogMess(INFO, (String("Laki ng SD Card: ") + totalSizeMB + " MB").c_str());
+  printLogMess(INFO, (String("File System: ") + (volume.fatType() == 32 ? "FAT32" : "FAT16")).c_str());
+  printLogMess(INFO, (String("Kabuuang Bloke: ") + totalBlocks).c_str());
+  printLogMess(INFO, (String("Laki ng Cluster: ") + clusterSize + " bytes").c_str());
+
+  sdCardInfoPrinted = true;
 }
-// !!!!!!!!!!!!!!!!!!!!! AYUSIN ANG BUONG BLOKE !!!!!!!!!!!!!!!!!!!
-// !!!!!!!!!!!!!!!!!!!!! AYUSIN ANG BUONG BLOKE !!!!!!!!!!!!!!!!!!!
-// !!!!!!!!!!!!!!!!!!!!! AYUSIN ANG BUONG BLOKE !!!!!!!!!!!!!!!!!!!
+
+void checkSDCard(bool initialCheck) {
+  static bool sdCardStatus = false;
+  bool newStatus = SD.begin(spiDevices[0].csPin);
+  if (initialCheck || newStatus != sdCardStatus) {
+    sdCardStatus = newStatus;
+    printLogMess(INFO, newStatus ? "Ang SD Kard ay SUMASALINYA." : "Ang SD Kard ay DI-SUMASALINYA.");
+  }
+  if (newStatus) {
+    checkSDCardDetails();
+  }
+}
 
 void setup() {
   Serial.begin(BAUD_RATE);
@@ -149,7 +173,9 @@ void setup() {
   Serial.println();
   if (!rtc.begin()) {
     printLogMess(ERROR, "Hindi matagpuan ang RTC.");
-    while (1);
+    while (1) {
+      printLogMess(INFO, "Pakitingnan ang mga koneksiyon.");
+    };
   }
   if (rtc.lostPower()) {
     printLogMess(WARN, "Nawalan ng koryente ang RTC, muling tinatakda ang oras.");
